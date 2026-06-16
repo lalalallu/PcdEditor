@@ -8,6 +8,7 @@ PCD 图形化编辑器 — tkinter GUI 主程序
 import copy
 import json
 import os
+import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -15,16 +16,29 @@ from ssh_handler import SSHHandler, SSHPermissionError
 from pcd_parser import parse_pcd, groups_to_text
 
 
-# 站点配置文件路径（与 app.py 同目录）
-SITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sites.json")
+# 打包后 __file__ 指向临时目录，改用可执行文件所在目录
+if getattr(sys, "frozen", False):
+    _APP_DIR = os.path.dirname(sys.executable)
+else:
+    _APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
+SITES_FILE = os.path.join(_APP_DIR, "sites.json")
 
 
 class PCDEditorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("PCD 远程图形化编辑器")
-        self.root.geometry("1050x720")
-        self.root.minsize(900, 620)
+        self.root.geometry("1100x780")
+        self.root.minsize(960, 660)
+
+        # Windows DPI 模糊修复
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.shcore.SetProcessDpiAwareness(1)
+            except Exception:
+                pass
 
         # 核心状态
         self.ssh = SSHHandler()
@@ -384,20 +398,25 @@ class PCDEditorApp:
             pt_frame = ttk.LabelFrame(parent, text="点 {}".format(pt_idx + 1), padding=4)
             pt_frame.pack(fill=tk.X, pady=2)
 
-            row = ttk.Frame(pt_frame)
-            row.pack(fill=tk.X)
+            # 第一行：xyz 可编辑
+            row1 = ttk.Frame(pt_frame)
+            row1.pack(fill=tk.X)
 
             vars_pt = []
             for label_text in ("x", "y", "z"):
-                ttk.Label(row, text="{}:".format(label_text)).pack(side=tk.LEFT, padx=(2, 2))
+                ttk.Label(row1, text="{}:".format(label_text)).pack(side=tk.LEFT, padx=(2, 2))
                 var = tk.StringVar()
-                entry = ttk.Entry(row, textvariable=var, width=14)
+                entry = ttk.Entry(row1, textvariable=var, width=14)
                 entry.pack(side=tk.LEFT, padx=(0, 6))
                 vars_pt.append(var)
 
+            # 第二行：normal_x/y/z、curvature 只读
+            row2 = ttk.Frame(pt_frame)
+            row2.pack(fill=tk.X, pady=(2, 0))
+
             for label_text in ("normal_x", "normal_y", "normal_z", "curvature"):
-                ttk.Label(row, text="{}:".format(label_text)).pack(side=tk.LEFT, padx=(2, 2))
-                lbl = ttk.Label(row, text="0", width=10, relief=tk.SUNKEN, anchor=tk.CENTER)
+                ttk.Label(row2, text="{}:".format(label_text)).pack(side=tk.LEFT, padx=(2, 2))
+                lbl = ttk.Label(row2, text="0", width=12, relief=tk.SUNKEN, anchor=tk.CENTER)
                 lbl.pack(side=tk.LEFT, padx=(0, 4))
 
             self._edit_entries.append(vars_pt)
