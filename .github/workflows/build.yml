@@ -17,7 +17,10 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y --no-install-recommends python3.8 python3.8-venv python3-tk python3-pip wget ca-certificates
+          apt-get install -y --no-install-recommends \
+            python3.8 python3.8-dev python3.8-venv python3-tk python3-pip \
+            build-essential libssl-dev libffi-dev \
+            binutils patchelf wget ca-certificates
           rm -rf /var/lib/apt/lists/*
 
       - name: 检出代码
