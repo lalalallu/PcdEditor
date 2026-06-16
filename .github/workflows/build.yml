@@ -1,0 +1,82 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+    steps:
+      - name: 安装系统依赖
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends python3.8 python3.8-venv python3-tk wget ca-certificates
+          rm -rf /var/lib/apt/lists/*
+
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 pip
+        run: |
+          python3.8 -m ensurepip --upgrade
+          python3.8 -m pip install --upgrade pip
+
+      - name: 安装 Python 依赖
+        run: python3.8 -m pip install -r requirements.txt
+
+      - name: 语法检查
+        run: |
+          python3.8 -m py_compile app.py
+          python3.8 -m py_compile ssh_handler.py
+          python3.8 -m py_compile pcd_parser.py
+
+      - name: 安装 PyInstaller
+        run: python3.8 -m pip install pyinstaller
+
+      - name: 打包可执行文件
+        run: python3.8 -m PyInstaller --onefile --name PcdEditor app.py
+
+      - name: 上传构建产物 (Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PcdEditor-linux
+          path: dist/PcdEditor
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python 3.8
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 语法检查
+        run: |
+          python -m py_compile app.py
+          python -m py_compile ssh_handler.py
+          python -m py_compile pcd_parser.py
+
+      - name: 安装 PyInstaller
+        run: pip install pyinstaller
+
+      - name: 打包可执行文件
+        run: pyinstaller --onefile --name PcdEditor app.py
+
+      - name: 上传构建产物 (Windows)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PcdEditor-windows
+          path: dist/PcdEditor.exe
