@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+env/
+.env
+
+# 站点配置（含明文密码）
+sites.json
+cg.txt
+changgan_vertices.pcd
+
+# IDE
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
