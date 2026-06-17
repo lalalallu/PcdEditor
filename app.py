@@ -39,9 +39,6 @@ class PCDEditorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("PCD 远程图形化编辑器")
-        self.root.geometry("1100x780")
-        self.root.minsize(960, 660)
-
         self._scale_fonts()
 
         # 核心状态
@@ -68,14 +65,23 @@ class PCDEditorApp:
     # ================================================================
 
     def _scale_fonts(self):
-        """根据系统 DPI 缩放 tkinter 默认字体，解决高 DPI 屏幕字太小问题。"""
+        """根据系统 DPI 缩放窗口尺寸和字体，解决高 DPI 屏幕字太小问题。"""
+        self._dpi_scale = 1.0
         if sys.platform != "win32":
+            self.root.geometry("1100x780")
+            self.root.minsize(960, 660)
             return
         try:
             import tkinter.font as tkfont
             dpi = self.root.winfo_fpixels('1i')
-            base_scale = dpi / 96.0
-            if base_scale > 1.05:
+            self._dpi_scale = max(1.0, dpi / 96.0)
+            w = int(1100 * self._dpi_scale)
+            h = int(780 * self._dpi_scale)
+            mw = int(960 * self._dpi_scale)
+            mh = int(660 * self._dpi_scale)
+            self.root.geometry("{}x{}".format(w, h))
+            self.root.minsize(mw, mh)
+            if self._dpi_scale > 1.05:
                 for name in ("TkDefaultFont", "TkTextFont", "TkFixedFont",
                              "TkMenuFont", "TkHeadingFont", "TkCaptionFont",
                              "TkSmallCaptionFont", "TkIconFont", "TkTooltipFont"):
@@ -83,14 +89,15 @@ class PCDEditorApp:
                         font = tkfont.nametofont(name)
                         old_size = font.cget("size")
                         if old_size > 0:
-                            new_size = max(9, int(round(old_size * base_scale)))
+                            new_size = max(9, int(round(old_size * self._dpi_scale)))
                             font.configure(size=new_size)
                     except Exception:
                         pass
                 style = ttk.Style()
                 style.configure("Treeview", font=tkfont.nametofont("TkDefaultFont"))
         except Exception:
-            pass
+            self.root.geometry("1100x780")
+            self.root.minsize(960, 660)
 
     def _load_sites(self):
         """从 JSON 文件加载站点配置列表。"""
@@ -366,9 +373,9 @@ class PCDEditorApp:
         self.tree.heading("组号", text="组号")
         self.tree.heading("坐标范围", text="坐标范围 (x / y)")
         self.tree.heading("状态", text="状态")
-        self.tree.column("组号", width=50, anchor=tk.CENTER)
-        self.tree.column("坐标范围", width=280)
-        self.tree.column("状态", width=110, anchor=tk.CENTER)
+        self.tree.column("组号", width=int(50 * self._dpi_scale), anchor=tk.CENTER)
+        self.tree.column("坐标范围", width=int(280 * self._dpi_scale))
+        self.tree.column("状态", width=int(110 * self._dpi_scale), anchor=tk.CENTER)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         tree_scroll = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
@@ -439,14 +446,20 @@ class PCDEditorApp:
                 entry.pack(side=tk.LEFT, padx=(0, 6))
                 vars_pt.append(var)
 
-            # 第二行：normal_x/y/z、curvature 只读
+            # 第二行：normal_x / normal_y / normal_z 只读
             row2 = ttk.Frame(pt_frame)
             row2.pack(fill=tk.X, pady=(2, 0))
-
-            for label_text in ("normal_x", "normal_y", "normal_z", "curvature"):
+            for label_text in ("normal_x", "normal_y", "normal_z"):
                 ttk.Label(row2, text="{}:".format(label_text)).pack(side=tk.LEFT, padx=(2, 2))
                 lbl = ttk.Label(row2, text="0", width=12, relief=tk.SUNKEN, anchor=tk.CENTER)
                 lbl.pack(side=tk.LEFT, padx=(0, 4))
+
+            # 第三行：curvature 只读
+            row3 = ttk.Frame(pt_frame)
+            row3.pack(fill=tk.X, pady=(2, 0))
+            ttk.Label(row3, text="curvature:").pack(side=tk.LEFT, padx=(2, 2))
+            lbl = ttk.Label(row3, text="0", width=12, relief=tk.SUNKEN, anchor=tk.CENTER)
+            lbl.pack(side=tk.LEFT, padx=(0, 4))
 
             self._edit_entries.append(vars_pt)
 
