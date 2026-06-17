@@ -15,6 +15,16 @@ from tkinter import ttk, messagebox
 from ssh_handler import SSHHandler, SSHPermissionError
 from pcd_parser import parse_pcd, groups_to_text
 
+# Windows DPI 感知 — 必须在任何窗口创建之前设置
+if sys.platform == "win32":
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        except Exception:
+            pass
 
 # 打包后 __file__ 指向临时目录，改用可执行文件所在目录
 if getattr(sys, "frozen", False):
@@ -32,13 +42,7 @@ class PCDEditorApp:
         self.root.geometry("1100x780")
         self.root.minsize(960, 660)
 
-        # Windows DPI 模糊修复
-        if sys.platform == "win32":
-            try:
-                import ctypes
-                ctypes.windll.shcore.SetProcessDpiAwareness(1)
-            except Exception:
-                pass
+        self._scale_fonts()
 
         # 核心状态
         self.ssh = SSHHandler()
@@ -62,6 +66,31 @@ class PCDEditorApp:
     # ================================================================
     #  站点配置持久化
     # ================================================================
+
+    def _scale_fonts(self):
+        """根据系统 DPI 缩放 tkinter 默认字体，解决高 DPI 屏幕字太小问题。"""
+        if sys.platform != "win32":
+            return
+        try:
+            import tkinter.font as tkfont
+            dpi = self.root.winfo_fpixels('1i')
+            base_scale = dpi / 96.0
+            if base_scale > 1.05:
+                for name in ("TkDefaultFont", "TkTextFont", "TkFixedFont",
+                             "TkMenuFont", "TkHeadingFont", "TkCaptionFont",
+                             "TkSmallCaptionFont", "TkIconFont", "TkTooltipFont"):
+                    try:
+                        font = tkfont.nametofont(name)
+                        old_size = font.cget("size")
+                        if old_size > 0:
+                            new_size = max(9, int(round(old_size * base_scale)))
+                            font.configure(size=new_size)
+                    except Exception:
+                        pass
+                style = ttk.Style()
+                style.configure("Treeview", font=tkfont.nametofont("TkDefaultFont"))
+        except Exception:
+            pass
 
     def _load_sites(self):
         """从 JSON 文件加载站点配置列表。"""
